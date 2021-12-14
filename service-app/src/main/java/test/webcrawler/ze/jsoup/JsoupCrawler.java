@@ -7,63 +7,40 @@ import org.jsoup.select.Elements;
 import org.springframework.stereotype.Service;
 
 import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.ArrayList;
-import java.util.Arrays;
+import java.util.*;
+import java.util.regex.Pattern;
 
 @Service
 public class JsoupCrawler {
-    public void startCrawl() throws IOException {
-        String url = "https://ru.wikipedia.org/wiki/Tesla";
-        String targetName = "Tesla";
+    private final CsvWriter csvWriter;
 
-        Document doc = Jsoup.connect(url).get();
+    public JsoupCrawler(CsvWriter csvWriter) {
+        this.csvWriter = csvWriter;
+    }
 
-        Elements names = doc.getElementsContainingOwnText(targetName);
-        ArrayList<String> sortNames = new ArrayList<>();
-
-        ArrayList<String> strings = new ArrayList<>();
-        for (Element e : names) {
-            strings.add(e.text());
-        }
-
-        for (String s : strings) {
-            String[] newstr = s.split(" ");
-            for (String string : newstr) {
-                if (string.equalsIgnoreCase(targetName)){
-                    sortNames.add(string);
-                }
+    public Statistic startCrawl(Document doc, String[] words) throws IOException {
+        LinkedHashMap<String, Integer> values = new LinkedHashMap<>();
+        Statistic statistic = new Statistic();
+        if (words != null){
+            for (String targetName : words) {
+                Elements names = doc.getElementsContainingOwnText(targetName);
+                statistic.setTotalCount(statistic.getTotalCount() + names.size());
+                values.put(targetName, names.size());
+                System.out.println("names size = " + names.size());
             }
-//            System.out.println(s);
         }
-        System.out.println(sortNames);
-        System.out.println("size = " + sortNames.size());
-//        String elements = String.valueOf(doc.text().contains(targetName));
-//        System.out.println(elements);
-//
-//        Elements pageElements = doc.select("a[href]");
-//        Elements nameelements = doc.getElementsContainingText(targetName);
-//
-//        ArrayList<String> hyperLinks = new ArrayList<String>();
-//        ArrayList<String> names = new ArrayList<>();
-//
-//
-//        for (Element e : pageElements) {
-//            hyperLinks.add("Text: " + e.text());
-//            hyperLinks.add("Link: " + e.attr("href"));
-//        }
-//        for (String s : hyperLinks) {
-//            System.out.println(s);
-//        }
-//
-//        System.out.println(nameelements);
-//        for (Element e: nameelements) {
-//            names.add("Name: " + e.text());
-//        }
-//        for (String s : names) {
-//            System.out.println(s);
-//        }
+        statistic.setStatistic(values);
+        return statistic;
+    }
 
-
+    public Statistic searchUrls(Document doc, Statistic statistic){
+        Elements pageNames = doc.select("a[href]");
+        List<String> urls = new ArrayList<>();
+        for (Element e : pageNames) {
+            urls.add(e.absUrl("href"));
+        }
+        statistic.setUrls(urls);
+        System.out.println("Size: " + statistic.getUrls().size());
+        return statistic;
     }
 }
